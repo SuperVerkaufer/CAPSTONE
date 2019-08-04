@@ -1,0 +1,42 @@
+Capstone Final Assignment: Textual Predictive Analytics
+========================================================
+author: spencer
+date: 30 July 2019
+autosize: true
+
+Pitch of the textual predictive tool - Slide 1
+========================================================
+
+This is an RStudio shiny application developed as a part of final project in the Capstone module in Coursera Data Science Course. The application enables the user to type in any word and/or words. The subsequent output is a predicted word that is anticipated to come after the input words
+
+Overview of the Predictive Tool - Slide 2
+========================================================
+
+The Application includes the following:
+Dynamic display as a result of input of word/s
+
+The App can be found at: <https://spencerng.shinyapps.io/Capstone1/>
+
+The dataset used for the analysis is available on: <https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip>
+
+For project related information: <https://www.coursera.org/learn/data-science-project/>
+
+Data Processing - Slide 3
+========================================================
+
+The three text files in English (twitter, blog and news) were combined into a corpus, cleaned, and tokenized into N-gram tables.
+
+Counts for last words were then tabulated in each Ngram table. To control file size, only word combinations with quadruple frequencies or greater were retained.
+
+The prefixes, next words, and values were saved as in rds format.
+
+Prediction - Slide 4
+========================================================
+
+Typing your words into the app than calls the Ngram tables. The app searches for matches to the word combinations and matches to subsets of it (i.e., the last words in a word combination) in the corresponding tables given the number of words typed into the app.
+
+Matches to each table are combined into one dataframe and ranked by decreasing value. The word with the highest values is output as the predicted word
+
+Thank you! - Slide 5
+========================================================
+Thank you!
