@@ -1,0 +1,207 @@
+
+install.packages("caret")
+library(caret)
+#library(reticulate)
+#py_install("scipy")
+library(caret)
+library(markdown)
+install.packages("SparseM", dependencies = TRUE)
+install.packages("caret", dependencies = TRUE)
+
+
+# SPENCER NG - table generator for use in Capstone project Shiny application.
+#
+
+setwd("C:/Users/spencer.ng/Desktop/TH training/R Code Training MMM/Capstone1")
+
+install.packages("tidytext")
+install.packages("readtext")
+
+library(readr)
+library(dplyr)
+library(tm)
+library(tidytext)
+library(readtext)
+library(quanteda)
+library(data.table)
+library(stringi)
+library(stringr)
+library(data.table)
+# Set the sample fraction and lower limit of counts to include in Tables
+sampfrac <- 0.3 
+freqLim <- 3
+# 
+lambda = 0.4
+lambda2 <- lambda^2
+lambda3 <- lambda^3
+lambda4 <- lambda^4
+#
+twittxt <- read_lines("en_US.twitter.txt")
+newstxt <- read_lines("en_US.news.txt")
+blogtxt <- read_lines("en_US.blogs.txt")
+#
+
+blogtxt <- sample(blogtxt, length(blogtxt) * 0.01, replace = FALSE)
+newstxt <- sample(newstxt, length(newstxt) * 0.01, replace = FALSE)
+twittxt <- sample(twittxt, length(twittxt) * 0.01, replace = FALSE)
+alltext <- c(twittxt, newstxt, blogtxt)
+alltext <- gsub("[^\x01-\x7F]", "", alltext)
+alltext <- removeNumbers(alltext)
+#
+alltext_df <- tibble(line = 1:length(alltext), text = alltext)
+alltext_df$text <- tolower(alltext_df$text)
+alltext.corpus <- corpus(alltext_df)
+profanity_vec <- read_lines("bad_words_list.txt")
+rm(alltext_df)
+#
+n1grams.tokens <- tokens(alltext.corpus, what = "word", remove_numbers = TRUE, remove_punct = TRUE,
+                         remove_symbols = TRUE, remove_separators = TRUE,
+                         remove_twitter = TRUE, remove_hyphens = TRUE, remove_url = TRUE,
+                         ngrams = 1, skip = 0, concatenator = "_",
+                         verbose = quanteda_options("verbose"), include_docvars = FALSE)
+n1grams.tokens <- tokens_remove(n1grams.tokens, profanity_vec, padding = FALSE)
+n1grams.dfm <- dfm(n1grams.tokens)
+n1gram.freq <- textstat_frequency(n1grams.dfm)
+n1gram.freq <- select(n1gram.freq, feature, frequency)
+colnames(n1gram.freq)[colnames(n1gram.freq)=="feature"] <- "ngram"
+colnames(n1gram.freq)[colnames(n1gram.freq)=="frequency"] <- "freq"
+n1gram_dt <- data.table(n1gram.freq)
+rm(n1grams.tokens); rm(n1grams.dfm); rm(n1gram.freq)
+n1gram_dt <- filter(n1gram_dt, freq>freqLim)
+Table1 <- n1gram_dt
+Table1$ngram <- gsub("_", " ", Table1$ngram) # replace all "_" with spaces
+Table1$ngram <- trimws(Table1$ngram, which="left") # get rid of blank spaces in front of some words
+obsCount <- sum(n1gram_dt$freq)
+Table1$S <- lambda4*Table1$freq/obsCount
+colnames(Table1)[colnames(Table1)=="ngram"] <- "nextword"
+Table1$ngram <- NA
+Table1$prefix <- NA
+Table1 <- select(Table1, prefix, nextword, S)
+Table1 <- Table1[order(-Table1$S), ]
+saveRDS(Table1, file = "Table1.rds")
+rm(Table1)
+
+n2grams.tokens <- tokens(alltext.corpus, what = "word", remove_numbers = TRUE, remove_punct = TRUE,
+                         remove_symbols = TRUE, remove_separators = TRUE,
+                         remove_twitter = TRUE, remove_hyphens = TRUE, remove_url = TRUE,
+                         ngrams = 2, skip = 0, concatenator = "_",
+                         verbose = quanteda_options("verbose"), include_docvars = FALSE)
+n2grams.tokens <- tokens_remove(n2grams.tokens, profanity_vec, padding = FALSE)
+n2grams.dfm <- dfm(n2grams.tokens)
+n2gram.freq <- textstat_frequency(n2grams.dfm)
+n2gram.freq <- select(n2gram.freq, feature, frequency)
+colnames(n2gram.freq)[colnames(n2gram.freq)=="feature"] <- "ngram"
+colnames(n2gram.freq)[colnames(n2gram.freq)=="frequency"] <- "freq"
+n2gram_dt <- data.table(n2gram.freq)
+rm(n2grams.tokens); rm(n2grams.dfm); rm(n2gram.freq)
+n2gram_dt <- filter(n2gram_dt, freq>freqLim)
+Table2 <- mutate(n2gram_dt, prefix = ngram, nextword = ngram)
+Table2$prefix <- gsub("_", " ", Table2$prefix) # replace all "_" in the prefix column with spaces
+Table2$prefix <- trimws(Table2$prefix, which="left") # get rid of blank spaces in front of some 1st words
+Table2$prefix <- gsub("\\s*\\w*$", "", Table2$prefix) # remove the second word in each prefix column entry
+Table2$nextword <- Table2$nextword <- gsub("_", " ", Table2$nextword) # replace all "_" in the nextword column with spaces
+Table2$nextword <- word(Table2$nextword, 2)
+n1prefix <- n1gram_dt
+rm(n1gram_dt)
+colnames(n1prefix)[colnames(n1prefix)=="ngram"] <- "prefix"
+colnames(n1prefix)[colnames(n1prefix)=="freq"] <- "obsCount"
+Table2 <- merge(n1prefix, Table2) # 
+Table2$S <- lambda3*Table2$freq/Table2$obsCount
+Table2 <- select(Table2, prefix, nextword, S)
+saveRDS(Table2, file = "Table2.rds")
+print("Table2 created")
+rm(Table2)
+
+n3grams.tokens <- tokens(alltext.corpus, what = "word", remove_numbers = TRUE, remove_punct = TRUE,
+                         remove_symbols = TRUE, remove_separators = TRUE,
+                         remove_twitter = TRUE, remove_hyphens = TRUE, remove_url = TRUE,
+                         ngrams = 3, skip = 0, concatenator = "_",
+                         verbose = quanteda_options("verbose"), include_docvars = FALSE)
+n3grams.tokens <- tokens_remove(n3grams.tokens, profanity_vec, padding = FALSE)
+n3grams.dfm <- dfm(n3grams.tokens)
+n3gram.freq <- textstat_frequency(n3grams.dfm)
+n3gram.freq <- select(n3gram.freq, feature, frequency)
+colnames(n3gram.freq)[colnames(n3gram.freq)=="feature"] <- "ngram"
+colnames(n3gram.freq)[colnames(n3gram.freq)=="frequency"] <- "freq"
+n3gram_dt <- data.table(n3gram.freq)
+rm(n3grams.tokens); rm(n3grams.dfm); rm(n3gram.freq)
+n3gram_dt <- filter(n3gram_dt, freq>freqLim)
+Table3 <- mutate(n3gram_dt, prefix = ngram, nextword = ngram)
+Table3$prefix <- gsub("_", " ", Table3$prefix) 
+Table3$prefix <- trimws(Table3$prefix, which="left") 
+Table3$prefix <- gsub("\\s*\\w*$", "", Table3$prefix) 
+Table3$prefix <- gsub(" ", "_", Table3$prefix)
+Table3$nextword <- Table3$nextword <- gsub("_", " ", Table3$nextword)
+Table3$nextword <- word(Table3$nextword, 3)
+n2prefix <- n2gram_dt
+rm(n2gram_dt)
+colnames(n2prefix)[colnames(n2prefix)=="ngram"] <- "prefix"
+colnames(n2prefix)[colnames(n2prefix)=="freq"] <- "obsCount"
+Table3 <- merge(n2prefix, Table3) # 
+Table3$S <- lambda2*Table3$freq/Table3$obsCount
+Table3 <- select(Table3, prefix, nextword, S)
+saveRDS(Table3, file = "Table3.rds")
+print("Table3 created")
+rm(Table3)
+
+n4grams.tokens <- tokens(alltext.corpus, what = "word", remove_numbers = TRUE, remove_punct = TRUE,
+                         remove_symbols = TRUE, remove_separators = TRUE,
+                         remove_twitter = TRUE, remove_hyphens = TRUE, remove_url = TRUE,
+                         ngrams = 4, skip = 0, concatenator = "_",
+                         verbose = quanteda_options("verbose"), include_docvars = FALSE)
+n4grams.tokens <- tokens_remove(n4grams.tokens, profanity_vec, padding = FALSE)
+n4grams.dfm <- dfm(n4grams.tokens)
+n4gram.freq <- textstat_frequency(n4grams.dfm)
+n4gram.freq <- select(n4gram.freq, feature, frequency)
+colnames(n4gram.freq)[colnames(n4gram.freq)=="feature"] <- "ngram"
+colnames(n4gram.freq)[colnames(n4gram.freq)=="frequency"] <- "freq"
+n4gram_dt <- data.table(n4gram.freq)
+rm(n4grams.tokens); rm(n4grams.dfm); rm(n4gram.freq)
+n4gram_dt <- filter(n4gram_dt, freq>freqLim)
+Table4 <- mutate(n4gram_dt, prefix = ngram, nextword = ngram)
+Table4$prefix <- gsub("_", " ", Table4$prefix)
+Table4$prefix <- trimws(Table4$prefix, which="left")
+Table4$prefix <- gsub("\\s*\\w*$", "", Table4$prefix)
+Table4$prefix <- gsub(" ", "_", Table4$prefix)
+Table4$nextword <- Table4$nextword <- gsub("_", " ", Table4$nextword)
+Table4$nextword <- word(Table4$nextword, 4)
+n3prefix <- n3gram_dt
+rm(n3gram_dt)
+colnames(n3prefix)[colnames(n3prefix)=="ngram"] <- "prefix"
+colnames(n3prefix)[colnames(n3prefix)=="freq"] <- "obsCount"
+Table4 <- merge(n3prefix, Table4) #
+Table4$S <- lambda*Table4$freq/Table4$obsCount
+Table4 <- select(Table4, prefix, nextword, S)
+saveRDS(Table4, file = "Table4.rds")
+print("Table4 created")
+rm(Table4)
+
+n5grams.tokens <- tokens(alltext.corpus, what = "word", remove_numbers = TRUE, remove_punct = TRUE,
+                         remove_symbols = TRUE, remove_separators = TRUE,
+                         remove_twitter = TRUE, remove_hyphens = TRUE, remove_url = TRUE,
+                         ngrams = 5, skip = 0, concatenator = "_",
+                         verbose = quanteda_options("verbose"), include_docvars = FALSE)
+n5grams.tokens <- tokens_remove(n5grams.tokens, profanity_vec, padding = FALSE)
+n5grams.dfm <- dfm(n5grams.tokens)
+n5gram.freq <- textstat_frequency(n5grams.dfm)
+n5gram.freq <- select(n5gram.freq, feature, frequency)
+colnames(n5gram.freq)[colnames(n5gram.freq)=="feature"] <- "ngram"
+colnames(n5gram.freq)[colnames(n5gram.freq)=="frequency"] <- "freq"
+n5gram_dt <- data.table(n5gram.freq)
+rm(n5grams.tokens); rm(n5grams.dfm); rm(n5gram.freq); 
+n5gram_dt <- filter(n5gram_dt, freq>freqLim)
+Table5 <- mutate(n5gram_dt, prefix = ngram, nextword = ngram)
+Table5$prefix <- gsub("_", " ", Table5$prefix)
+Table5$prefix <- trimws(Table5$prefix, which="left")
+Table5$prefix <- gsub("\\s*\\w*$", "", Table5$prefix)
+Table5$prefix <- gsub(" ", "_", Table5$prefix)
+Table5$nextword <- Table5$nextword <- gsub("_", " ", Table5$nextword)
+Table5$nextword <- word(Table5$nextword, 5)
+n4prefix <- n4gram_dt
+rm(n4gram_dt)
+colnames(n4prefix)[colnames(n4prefix)=="ngram"] <- "prefix"
+colnames(n4prefix)[colnames(n4prefix)=="freq"] <- "obsCount"
+Table5 <- merge(n4prefix, Table5) # 
+Table5$S <- Table5$freq/Table5$obsCount
+Table5 <- select(Table5, prefix, nextword, S)
+saveRDS(Table5, file = "Table5.rds")
